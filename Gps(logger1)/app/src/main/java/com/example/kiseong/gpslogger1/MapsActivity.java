@@ -1,46 +1,90 @@
 package com.example.kiseong.gpslogger1;
 
+import android.graphics.Point;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
 
+import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+import java.util.Map;
+
+public class MapsActivity extends FragmentActivity implements GoogleMap.OnMapClickListener {
 
     private GoogleMap mMap;
+    //GPS gps = new GPS(MapsActivity.this);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
+
+        MapsInitializer.initialize(getApplicationContext());
+        init();
+
     }
 
+    /** Map 클릭시 터치 이벤트 */
+    public void onMapClick(LatLng point) {
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
+        // 현재 위도와 경도에서 화면 포인트를 알려준다
+        Point screenPt = mMap.getProjection().toScreenLocation(point);
 
-        // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        // 현재 화면에 찍힌 포인트로 부터 위도와 경도를 알려준다.
+        LatLng latLng = mMap.getProjection().fromScreenLocation(screenPt);
+
+        Log.d("맵좌표", "좌표: 위도(" + String.valueOf(point.latitude) + "), 경도("
+                + String.valueOf(point.longitude) + ")");
+        Log.d("화면좌표", "화면좌표: X(" + String.valueOf(screenPt.x) + "), Y("
+                + String.valueOf(screenPt.y) + ")");
     }
+
+    private void init() {
+
+        GooglePlayServicesUtil.isGooglePlayServicesAvailable(MapsActivity.this);
+        mMap = ((SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map)).getMap();
+
+        // 맵의 이동
+        //mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 15));
+
+        GPS gps = new GPS(MapsActivity.this);
+        // GPS 사용유무 가져오기
+        if (gps.isGetLocation()) {
+            double latitude = gps.getLatitude();
+            double longitude = gps.getLongitude();
+
+            // Creating a LatLng object for the current location
+            LatLng latLng = new LatLng(latitude, longitude);
+
+            // Showing the current location in Google Map
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+
+            // Map 을 zoom 합니다.
+            mMap.animateCamera(CameraUpdateFactory.zoomTo(13));
+
+            // 마커 설정.
+            MarkerOptions optFirst = new MarkerOptions();
+            optFirst.position(latLng);// 위도 • 경도
+            optFirst.title("Current Position");// 제목 미리보기
+            optFirst.snippet("Snippet");
+            //optFirst.icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_launcher));
+            mMap.addMarker(optFirst).showInfoWindow();
+        }
+    }
+    public void onClick(View v){
+        finish();
+    }
+
 }
+
+
